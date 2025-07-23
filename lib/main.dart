@@ -34,27 +34,27 @@ class _LedControllerPageState extends State<LedControllerPage> {
   BluetoothDevice? connectedDevice;
   List<BluetoothService> services = [];
   BluetoothService? ledService;
-  
+
   // LED characteristics
   BluetoothCharacteristic? led1Char;
   BluetoothCharacteristic? led2Char;
   BluetoothCharacteristic? led3Char;
   BluetoothCharacteristic? led4Char;
-  
+
   // LED states
   bool led1State = false;
   bool led2State = false;
   bool led3State = false;
   bool led4State = false;
-  
+
   // Scanning state
   bool isScanning = false;
   bool isConnected = false;
   List<ScanResult> scanResults = [];
   BluetoothAdapterState bluetoothState = BluetoothAdapterState.unknown;
-  
-  // UUIDs (ESP32 format)
-  static const String ledServiceUuid = '12345678-90ab-cdef-1234-567890abcdef';
+
+  // UUIDs (Real ESP32 format from your device)
+  static const String ledServiceUuid = 'efcdab90-7856-3412-efcd-ab9078563412';
   static const String led1CharUuid = '12345678-90ab-cdef-1234-567890abcd01';
   static const String led2CharUuid = '12345678-90ab-cdef-1234-567890abcd02';
   static const String led3CharUuid = '12345678-90ab-cdef-1234-567890abcd03';
@@ -68,14 +68,14 @@ class _LedControllerPageState extends State<LedControllerPage> {
 
   Future<void> _initializeBluetooth() async {
     await _requestPermissions();
-    
+
     // Listen to Bluetooth adapter state
     FlutterBluePlus.adapterState.listen((state) {
       setState(() {
         bluetoothState = state;
       });
     });
-    
+
     // Get current state
     bluetoothState = await FlutterBluePlus.adapterState.first;
     setState(() {});
@@ -105,7 +105,7 @@ class _LedControllerPageState extends State<LedControllerPage> {
         timeout: const Duration(seconds: 15),
         androidUsesFineLocation: true,
       );
-      
+
       FlutterBluePlus.scanResults.listen((results) {
         setState(() {
           scanResults = results;
@@ -165,7 +165,8 @@ class _LedControllerPageState extends State<LedControllerPage> {
                   children: [
                     const Text(
                       'Select Bluetooth Device',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -174,7 +175,7 @@ class _LedControllerPageState extends State<LedControllerPage> {
                   ],
                 ),
               ),
-              
+
               // Bluetooth Status Card
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -191,13 +192,15 @@ class _LedControllerPageState extends State<LedControllerPage> {
                     Expanded(
                       child: Text(
                         _getBluetoothStateMessage(),
-                        style: TextStyle(color: _getStatusColor(), fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: _getStatusColor(),
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               // Scan Button
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -205,18 +208,19 @@ class _LedControllerPageState extends State<LedControllerPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: isScanning ? null : _startScan,
-                    icon: isScanning 
+                    icon: isScanning
                         ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.bluetooth_searching),
-                    label: Text(isScanning ? 'Scanning...' : 'Scan All Devices'),
+                    label:
+                        Text(isScanning ? 'Scanning...' : 'Scan All Devices'),
                   ),
                 ),
               ),
-              
+
               // Device List
               Expanded(
                 child: _buildDeviceList(scrollController),
@@ -264,15 +268,15 @@ class _LedControllerPageState extends State<LedControllerPage> {
               style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
-                         Text(
-               isScanning 
-                   ? 'Please wait while we search for nearby devices'
-                   : bluetoothState == BluetoothAdapterState.unavailable
-                       ? 'Simulator mode - Use physical device for real Bluetooth'
-                       : 'Tap "Scan All Devices" to start searching',
-               style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-               textAlign: TextAlign.center,
-             ),
+            Text(
+              isScanning
+                  ? 'Please wait while we search for nearby devices'
+                  : bluetoothState == BluetoothAdapterState.unavailable
+                      ? 'Simulator mode - Use physical device for real Bluetooth'
+                      : 'Tap "Scan All Devices" to start searching',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
@@ -290,15 +294,15 @@ class _LedControllerPageState extends State<LedControllerPage> {
 
   Widget _buildDeviceCard(ScanResult result) {
     final device = result.device;
-    final deviceName = device.platformName.isNotEmpty 
-        ? device.platformName 
+    final deviceName = device.platformName.isNotEmpty
+        ? device.platformName
         : result.advertisementData.localName.isNotEmpty
             ? result.advertisementData.localName
             : 'Unknown Device';
-    
-    final isEsp32 = deviceName.toLowerCase().contains('esp32') || 
-                   deviceName.toLowerCase().contains('nimble');
-    
+
+    final isEsp32 = deviceName.toLowerCase().contains('esp32') ||
+        deviceName.toLowerCase().contains('nimble');
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
@@ -322,7 +326,8 @@ class _LedControllerPageState extends State<LedControllerPage> {
             Text('ID: ${device.remoteId.str}'),
             Row(
               children: [
-                Icon(Icons.signal_cellular_alt, size: 16, color: _getRssiColor(result.rssi)),
+                Icon(Icons.signal_cellular_alt,
+                    size: 16, color: _getRssiColor(result.rssi)),
                 const SizedBox(width: 4),
                 Text(
                   '${result.rssi} dBm',
@@ -331,7 +336,8 @@ class _LedControllerPageState extends State<LedControllerPage> {
                 const SizedBox(width: 16),
                 if (isEsp32) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.green,
                       borderRadius: BorderRadius.circular(4),
@@ -377,9 +383,9 @@ class _LedControllerPageState extends State<LedControllerPage> {
         connectedDevice = device;
         isConnected = true;
       });
-      
+
       _discoverServices();
-      
+
       if (mounted) {
         _showSnackBar('Connected to ${device.platformName}!', Colors.green);
       }
@@ -392,16 +398,47 @@ class _LedControllerPageState extends State<LedControllerPage> {
 
   Future<void> _discoverServices() async {
     if (connectedDevice == null) return;
-    
+
     services = await connectedDevice!.discoverServices();
-    
+
+    // DEBUG: Print all discovered services
+    print('🔍 Discovered ${services.length} services:');
     for (BluetoothService service in services) {
-      if (service.uuid.toString().toLowerCase() == ledServiceUuid.toLowerCase()) {
+      print('📋 Service: ${service.uuid.toString()}');
+      for (BluetoothCharacteristic characteristic in service.characteristics) {
+        print('  📝 Characteristic: ${characteristic.uuid.toString()}');
+      }
+    }
+
+    // Show user what services were found with their characteristics
+    String debugInfo = 'Found ${services.length} services:\n\n';
+    for (BluetoothService service in services) {
+      debugInfo += '🔵 Service: ${service.uuid.toString()}\n';
+      for (BluetoothCharacteristic char in service.characteristics) {
+        debugInfo += '  📝 ${char.uuid.toString()}\n';
+      }
+      debugInfo += '\n';
+    }
+    _showSnackBar('Services & Characteristics:\n$debugInfo', Colors.blue);
+
+    // Look for LED service
+    for (BluetoothService service in services) {
+      if (service.uuid.toString().toLowerCase() ==
+          ledServiceUuid.toLowerCase()) {
         ledService = service;
-        
-        for (BluetoothCharacteristic characteristic in service.characteristics) {
+
+        // Assign characteristics to LEDs (use available characteristics)
+        final characteristics = service.characteristics;
+        if (characteristics.length >= 1) led1Char = characteristics[0];
+        if (characteristics.length >= 2) led2Char = characteristics[1];
+        if (characteristics.length >= 3) led3Char = characteristics[2];
+        if (characteristics.length >= 4) led4Char = characteristics[3];
+
+        // Also check for specific UUIDs (fallback)
+        for (BluetoothCharacteristic characteristic
+            in service.characteristics) {
           final charUuid = characteristic.uuid.toString().toLowerCase();
-          
+
           if (charUuid == led1CharUuid.toLowerCase()) {
             led1Char = characteristic;
           } else if (charUuid == led2CharUuid.toLowerCase()) {
@@ -415,16 +452,36 @@ class _LedControllerPageState extends State<LedControllerPage> {
         break;
       }
     }
-    
+
+    // If LED service not found, show what we expected vs found
+    if (ledService == null) {
+      _showSnackBar(
+        'LED Service NOT found!\n\nExpected: $ledServiceUuid\n\nActual services:\n$debugInfo',
+        Colors.orange,
+      );
+    } else {
+      int foundChars = 0;
+      if (led1Char != null) foundChars++;
+      if (led2Char != null) foundChars++;
+      if (led3Char != null) foundChars++;
+      if (led4Char != null) foundChars++;
+
+      _showSnackBar(
+        'LED Service found! ✅\n\nService: ${ledService!.uuid.toString()}\nCharacteristics: $foundChars/4 found\n\nReady to control LEDs!',
+        Colors.green,
+      );
+    }
+
     setState(() {});
   }
 
-  Future<void> _controlLed(BluetoothCharacteristic? characteristic, bool state, int ledNumber) async {
+  Future<void> _controlLed(BluetoothCharacteristic? characteristic, bool state,
+      int ledNumber) async {
     if (characteristic == null) return;
-    
+
     try {
       await characteristic.write([state ? 1 : 0]);
-      
+
       setState(() {
         switch (ledNumber) {
           case 1:
@@ -441,9 +498,10 @@ class _LedControllerPageState extends State<LedControllerPage> {
             break;
         }
       });
-      
+
       if (mounted) {
-        _showSnackBar('LED $ledNumber turned ${state ? "ON" : "OFF"}', state ? Colors.green : Colors.red);
+        _showSnackBar('LED $ledNumber turned ${state ? "ON" : "OFF"}',
+            state ? Colors.green : Colors.red);
       }
     } catch (e) {
       if (mounted) {
@@ -456,9 +514,20 @@ class _LedControllerPageState extends State<LedControllerPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: SingleChildScrollView(
+          child: Text(
+            message,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
         backgroundColor: backgroundColor,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 8), // Longer duration for debugging
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'CLOSE',
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+          textColor: Colors.white,
+        ),
       ),
     );
   }
@@ -478,7 +547,8 @@ class _LedControllerPageState extends State<LedControllerPage> {
     }
   }
 
-  Widget _buildLedControl(String ledName, bool state, BluetoothCharacteristic? char, int ledNumber) {
+  Widget _buildLedControl(String ledName, bool state,
+      BluetoothCharacteristic? char, int ledNumber) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -537,7 +607,7 @@ class _LedControllerPageState extends State<LedControllerPage> {
                 child: Column(
                   children: [
                     Text(
-                      isConnected 
+                      isConnected
                           ? 'Connected to ${connectedDevice?.platformName ?? "Device"}'
                           : 'Not connected',
                       style: TextStyle(
@@ -565,9 +635,9 @@ class _LedControllerPageState extends State<LedControllerPage> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // LED controls
             if (isConnected && ledService != null) ...[
               const Text(
