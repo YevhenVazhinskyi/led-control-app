@@ -1,0 +1,89 @@
+@startuml ESP32_LED_Controller_Sequence
+!theme plain
+title ESP32 LED Controller - BLE Connection & LED Control Sequence
+
+actor User
+participant "LedControllerPage" as Controller
+participant "BleService" as BLE
+participant "PermissionsHelper" as Permissions
+participant "DeviceSelectionSheet" as DeviceSheet
+participant "flutter_blue_plus" as BluePlus
+participant "ESP32 Device" as ESP32
+
+== App Initialization ==
+User -> Controller : Launch App
+Controller -> Permissions : requestBluetoothPermissions()
+Permissions -> Permissions : Request location, bluetooth, scan, connect
+Controller -> BLE : initializeBluetooth()
+BLE -> BluePlus : adapterState.listen()
+BluePlus -> BLE : BluetoothAdapterState.on
+BLE -> Controller : Ready
+
+== Device Discovery ==
+User -> Controller : Tap "Select Bluetooth Device"
+Controller -> DeviceSheet : showDeviceSelectionSheet()
+DeviceSheet -> DeviceSheet : Show bottom sheet
+User -> DeviceSheet : Tap "Scan All Devices"
+DeviceSheet -> Controller : onScanPressed()
+Controller -> BLE : startScan()
+BLE -> BluePlus : startScan(timeout: 15s)
+BluePlus -> ESP32 : BLE Advertisement Request
+ESP32 -> BluePlus : BLE Advertisement Response
+BluePlus -> BLE : scanResults.listen()
+BLE -> Controller : List<ScanResult>
+Controller -> DeviceSheet : Update scan results
+DeviceSheet -> DeviceSheet : Display device list
+
+== Device Connection ==
+User -> DeviceSheet : Select ESP32 device
+DeviceSheet -> Controller : onDeviceSelected(device)
+Controller -> BLE : connectToDevice(device)
+BLE -> BluePlus : device.connect(timeout: 15s)
+BluePlus -> ESP32 : BLE Connection Request
+ESP32 -> BluePlus : BLE Connection Response
+BluePlus -> BLE : Connection established
+BLE -> BLE : discoverServices()
+BLE -> BluePlus : connectedDevice.discoverServices()
+BluePlus -> ESP32 : Service Discovery Request
+ESP32 -> BluePlus : Service & Characteristic Info
+BluePlus -> BLE : List<BluetoothService>
+BLE -> BLE : Find LED service by UUID
+BLE -> BLE : Map characteristics to LED controls
+BLE -> Controller : Connection successful
+Controller -> Controller : Show success message
+
+== LED Control ==
+User -> Controller : Toggle LED 1 Switch
+Controller -> BLE : controlLed(led1Char, true, 1)
+BLE -> BluePlus : led1Char.write([1])
+BluePlus -> ESP32 : Write [1] to LED1 characteristic
+ESP32 -> ESP32 : Turn on LED 1
+ESP32 -> BluePlus : Write confirmation
+BluePlus -> BLE : Write successful
+BLE -> Controller : LED control successful
+Controller -> Controller : Update LED state
+Controller -> Controller : Show "LED 1 turned ON" message
+
+User -> Controller : Toggle LED 1 Switch (OFF)
+Controller -> BLE : controlLed(led1Char, false, 1)
+BLE -> BluePlus : led1Char.write([0])
+BluePlus -> ESP32 : Write [0] to LED1 characteristic
+ESP32 -> ESP32 : Turn off LED 1
+ESP32 -> BluePlus : Write confirmation
+BluePlus -> BLE : Write successful
+BLE -> Controller : LED control successful
+Controller -> Controller : Update LED state
+Controller -> Controller : Show "LED 1 turned OFF" message
+
+== Disconnection ==
+User -> Controller : Tap "Disconnect"
+Controller -> BLE : disconnect()
+BLE -> BluePlus : connectedDevice.disconnect()
+BluePlus -> ESP32 : BLE Disconnect Request
+ESP32 -> BluePlus : BLE Disconnect Response
+BluePlus -> BLE : Disconnection successful
+BLE -> BLE : Clear connection state
+BLE -> Controller : Disconnected
+Controller -> Controller : Reset UI to "Not connected"
+
+@enduml

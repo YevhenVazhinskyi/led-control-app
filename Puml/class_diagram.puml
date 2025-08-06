@@ -1,0 +1,143 @@
+@startuml ESP32_LED_Controller_Classes
+!theme plain
+title ESP32 LED Controller - Class Diagram
+
+class MyApp {
+  +Widget build(BuildContext context)
+}
+
+class LedControllerPage {
+  +State<LedControllerPage> createState()
+}
+
+class _LedControllerPageState {
+  -BleService _bleService
+  -LedState _ledState
+  -bool isScanning
+  -List<ScanResult> scanResults
+  
+  +void initState()
+  -Future<void> _initializeBluetooth()
+  -Future<void> _startScan()
+  -void _showDeviceSelectionSheet()
+  -Future<void> _connectToDevice(BluetoothDevice device)
+  -Future<void> _controlLed(BluetoothCharacteristic? char, bool state, int ledNumber)
+  -Future<void> _disconnect()
+  +Widget build(BuildContext context)
+  +void dispose()
+}
+
+class BleService {
+  +BluetoothDevice? connectedDevice
+  +List<BluetoothService> services
+  +BluetoothService? ledService
+  +BluetoothCharacteristic? led1Char
+  +BluetoothCharacteristic? led2Char
+  +BluetoothCharacteristic? led3Char
+  +BluetoothCharacteristic? led4Char
+  +bool isConnected
+  +BluetoothAdapterState bluetoothState
+  
+  +Future<void> initializeBluetooth()
+  +Future<List<ScanResult>> startScan(Duration timeout)
+  +String getBluetoothStateMessage()
+  +Future<void> connectToDevice(BluetoothDevice device)
+  +Future<void> discoverServices()
+  +Future<void> controlLed(BluetoothCharacteristic? char, bool state)
+  +Future<void> disconnect()
+  +String getServicesDebugInfo()
+  +int getFoundCharacteristicsCount()
+}
+
+class LedDevice {
+  +BluetoothDevice device
+  +String displayName
+  +int rssi
+  +bool isEsp32
+  
+  +LedDevice.fromScanResult(ScanResult result)
+}
+
+class LedState {
+  +bool led1State
+  +bool led2State
+  +bool led3State
+  +bool led4State
+  
+  +void updateLedState(int ledNumber, bool state)
+  +bool getLedState(int ledNumber)
+}
+
+class BleConstants {
+  +{static} String ledServiceUuid
+  +{static} String led1CharUuid
+  +{static} String led2CharUuid
+  +{static} String led3CharUuid
+  +{static} String led4CharUuid
+}
+
+class PermissionsHelper {
+  +{static} Future<void> requestBluetoothPermissions()
+}
+
+class UiHelpers {
+  +{static} Color getStatusColor(BluetoothAdapterState state)
+  +{static} IconData getStatusIcon(BluetoothAdapterState state)
+  +{static} Color getRssiColor(int rssi)
+  +{static} void showSnackBar(BuildContext context, String message, Color? color)
+}
+
+class DeviceSelectionSheet {
+  +BluetoothAdapterState bluetoothState
+  +bool isScanning
+  +List<ScanResult> scanResults
+  +VoidCallback onScanPressed
+  +Function(BluetoothDevice) onDeviceSelected
+  
+  +Widget build(BuildContext context)
+}
+
+class DeviceCard {
+  +LedDevice ledDevice
+  +VoidCallback onTap
+  
+  +Widget build(BuildContext context)
+}
+
+class LedControlWidget {
+  +String ledName
+  +bool state
+  +BluetoothCharacteristic? characteristic
+  +int ledNumber
+  +Function(BluetoothCharacteristic?, bool, int) onLedToggle
+  
+  +Widget build(BuildContext context)
+}
+
+class ConnectionStatusCard {
+  +bool isConnected
+  +BluetoothDevice? connectedDevice
+  +VoidCallback onSelectDevice
+  +VoidCallback onDisconnect
+  
+  +Widget build(BuildContext context)
+}
+
+' Relationships
+MyApp --> LedControllerPage
+LedControllerPage --> _LedControllerPageState
+_LedControllerPageState --> BleService
+_LedControllerPageState --> LedState
+_LedControllerPageState --> DeviceSelectionSheet
+_LedControllerPageState --> ConnectionStatusCard
+_LedControllerPageState --> LedControlWidget
+
+BleService --> BleConstants
+DeviceSelectionSheet --> DeviceCard
+DeviceCard --> LedDevice
+DeviceCard --> UiHelpers
+DeviceSelectionSheet --> UiHelpers
+_LedControllerPageState --> PermissionsHelper
+_LedControllerPageState --> UiHelpers
+
+@enduml

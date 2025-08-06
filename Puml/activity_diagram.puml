@@ -1,0 +1,111 @@
+@startuml ESP32_LED_Controller_Activity
+!theme plain
+title ESP32 LED Controller - User Activity Flow
+
+start
+
+:Launch ESP32 LED Controller App;
+:Initialize Bluetooth & Request Permissions;
+
+if (Bluetooth Available?) then (yes)
+  :Show "Select Bluetooth Device" button;
+else (no)
+  :Show "Bluetooth unavailable" message;
+  stop
+endif
+
+:User taps "Select Bluetooth Device";
+:Open Device Selection Bottom Sheet;
+
+if (Bluetooth Enabled?) then (yes)
+  :Show "Scan All Devices" button;
+else (no)
+  :Show "Enable Bluetooth" message;
+  :Wait for user to enable Bluetooth;
+endif
+
+:User taps "Scan All Devices";
+:Start 15-second BLE scan;
+:Show scanning progress indicator;
+
+fork
+  :Discover BLE devices;
+  :Update device list in real-time;
+fork again
+  :Wait for scan timeout;
+end fork
+
+:Display discovered devices;
+:Highlight ESP32 devices with green badge;
+:Show signal strength for each device;
+
+if (Devices found?) then (yes)
+  :User selects a device;
+else (no)
+  :Show "No devices found" message;
+  :User can rescan;
+  backward :User taps "Scan All Devices";
+endif
+
+:Attempt BLE connection (15s timeout);
+
+if (Connection successful?) then (yes)
+  :Close device selection sheet;
+  :Show "Connected to [Device Name]";
+  :Discover BLE services;
+else (no)
+  :Show connection error;
+  :Return to device list;
+  backward :User selects a device;
+endif
+
+:Search for LED service UUID;
+
+if (LED service found?) then (yes)
+  :Map 4 characteristics to LED controls;
+  :Show "LED Service found!" message;
+  :Display 4 LED control widgets;
+else (no)
+  :Show "LED service not found" error;
+  :Display expected vs actual services;
+  :Stay connected for debugging;
+endif
+
+partition "LED Control Loop" {
+  repeat
+    :Wait for user LED interaction;
+    
+    if (LED switch toggled?) then (ON)
+      :Send [1] to LED characteristic;
+      :Update LED visual to red with glow;
+      :Show "LED X turned ON" message;
+    else (OFF)
+      :Send [0] to LED characteristic;
+      :Update LED visual to grey;
+      :Show "LED X turned OFF" message;
+    endif
+    
+    if (Write successful?) then (yes)
+      :Update LED state;
+    else (no)
+      :Show "Failed to control LED" error;
+    endif
+    
+  repeat while (User continues using LEDs?)
+}
+
+if (User disconnects?) then (yes)
+  :Send disconnect command;
+  :Clear connection state;
+  :Reset all LED states;
+  :Show "Not connected";
+  :Display "Select Bluetooth Device" button;
+  backward :Show "Select Bluetooth Device" button;
+else (no)
+  :Continue LED control;
+  backward :Wait for user LED interaction;
+endif
+
+stop
+
+@enduml

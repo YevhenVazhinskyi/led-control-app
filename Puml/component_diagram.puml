@@ -1,0 +1,68 @@
+@startuml ESP32_LED_Controller_Components
+!theme plain
+title ESP32 LED Controller - Component Architecture
+
+package "Flutter App" {
+  [main.dart] as Main
+  
+  package "Services" {
+    [BleService] as BLE
+  }
+  
+  package "Models" {
+    [LedDevice] as Device
+    [LedState] as State
+  }
+  
+  package "Constants" {
+    [BleConstants] as Constants
+  }
+  
+  package "Utils" {
+    [PermissionsHelper] as Permissions
+    [UiHelpers] as UiUtils
+  }
+  
+  package "Widgets" {
+    [DeviceSelectionSheet] as DeviceSheet
+    [DeviceCard] as Card
+    [LedControlWidget] as LedWidget
+    [ConnectionStatusCard] as StatusCard
+  }
+}
+
+package "External" {
+  [flutter_blue_plus] as BluePlus
+  [permission_handler] as PermHandler
+  [ESP32 Device] as ESP32
+}
+
+' Dependencies
+Main --> BLE
+Main --> Device
+Main --> State
+Main --> Permissions
+Main --> UiUtils
+Main --> DeviceSheet
+Main --> StatusCard
+Main --> LedWidget
+
+BLE --> Constants
+BLE --> BluePlus
+DeviceSheet --> Card
+DeviceSheet --> UiUtils
+Card --> Device
+Card --> UiUtils
+LedWidget --> BluePlus
+
+Permissions --> PermHandler
+BLE --> ESP32
+BluePlus --> ESP32
+
+note right of ESP32
+  Physical ESP32 with
+  4 LEDs controlled
+  via BLE characteristics
+end note
+
+@enduml

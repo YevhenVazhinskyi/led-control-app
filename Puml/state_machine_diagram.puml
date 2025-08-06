@@ -1,0 +1,123 @@
+@startuml ESP32_LED_Controller_StateMachine
+!theme plain
+title ESP32 LED Controller - State Machine
+
+[*] --> AppStart
+
+state AppStart {
+  AppStart : Initialize Bluetooth
+  AppStart : Request Permissions
+}
+
+AppStart --> BluetoothOff : BT disabled
+AppStart --> BluetoothReady : BT enabled
+
+state BluetoothOff {
+  BluetoothOff : Show "Enable Bluetooth" message
+  BluetoothOff : Disable scan functionality
+}
+
+BluetoothOff --> BluetoothReady : User enables BT
+
+state BluetoothReady {
+  BluetoothReady : Show "Select Device" button
+  BluetoothReady : Ready for scanning
+}
+
+BluetoothReady --> Scanning : User taps scan
+
+state Scanning {
+  Scanning : Show loading indicator
+  Scanning : Discover BLE devices
+  Scanning : Update scan results list
+}
+
+Scanning --> DeviceFound : Devices discovered
+Scanning --> BluetoothReady : Scan timeout/complete
+
+state DeviceFound {
+  DeviceFound : Display device list
+  DeviceFound : Show ESP32 badges
+  DeviceFound : Show signal strength
+}
+
+DeviceFound --> Connecting : User selects device
+DeviceFound --> Scanning : User rescans
+
+state Connecting {
+  Connecting : Show connection progress
+  Connecting : Establish BLE connection
+  Connecting : Discover services
+}
+
+Connecting --> Connected : Connection successful
+Connecting --> ConnectionFailed : Connection failed
+
+state ConnectionFailed {
+  ConnectionFailed : Show error message
+  ConnectionFailed : Return to device selection
+}
+
+ConnectionFailed --> BluetoothReady : User retries
+
+state Connected {
+  Connected : Show device name
+  Connected : Display "Disconnect" button
+}
+
+Connected --> ServiceDiscovery : Auto discover services
+
+state ServiceDiscovery {
+  ServiceDiscovery : Find LED service
+  ServiceDiscovery : Map characteristics
+  ServiceDiscovery : Show debug info
+}
+
+ServiceDiscovery --> LEDServiceFound : LED service found
+ServiceDiscovery --> LEDServiceNotFound : LED service not found
+
+state LEDServiceNotFound {
+  LEDServiceNotFound : Show service not found error
+  LEDServiceNotFound : Display expected vs actual UUIDs
+}
+
+LEDServiceNotFound --> Connected : Stay connected
+
+state LEDServiceFound {
+  LEDServiceFound : Show LED controls
+  LEDServiceFound : Enable LED switches
+  LEDServiceFound : Show success message
+}
+
+state LEDControlActive {
+  LEDControlActive : LED 1 Control
+  LEDControlActive : LED 2 Control  
+  LEDControlActive : LED 3 Control
+  LEDControlActive : LED 4 Control
+}
+
+LEDServiceFound --> LEDControlActive
+
+state "LED Control" as LEDControl {
+  state LEDOff
+  state LEDOn
+  
+  LEDOff --> LEDOn : User toggles ON
+  LEDOn --> LEDOff : User toggles OFF
+  
+  LEDOn : Send [1] to characteristic
+  LEDOn : Show red glowing LED
+  LEDOn : Update LED state
+  
+  LEDOff : Send [0] to characteristic  
+  LEDOff : Show grey LED
+  LEDOff : Update LED state
+}
+
+LEDControlActive --> LEDControl : User interacts with LED
+
+Connected --> BluetoothReady : User disconnects
+LEDServiceFound --> BluetoothReady : User disconnects
+LEDControlActive --> BluetoothReady : User disconnects
+
+@enduml
