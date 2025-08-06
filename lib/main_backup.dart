@@ -7,7 +7,6 @@ import 'utils/ui_helpers.dart';
 import 'widgets/device_selection_sheet.dart';
 import 'widgets/connection_status_card.dart';
 import 'widgets/led_control_widget.dart';
-import 'widgets/motor_control_widget.dart';
 
 void main() {
   FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
@@ -221,12 +220,6 @@ class _LedControllerPageState extends State<LedControllerPage> {
                     ),
                   ],
                 ),
-              ),
-
-              // MOTOR CONTROL WIDGET ADDED
-              const SizedBox(height: 10),
-              MotorControlWidget(
-                bleService: _bleService,
               ),
             ] else if (_bleService.isConnected)
               const Expanded(
