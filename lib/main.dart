@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ESP32 LED Controller',
+      title: 'ESP32-S3 Stepper Motor Controller',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,

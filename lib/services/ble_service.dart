@@ -41,7 +41,7 @@ class BleService {
     bluetoothState = await FlutterBluePlus.adapterState.first;
   }
 
-  // EXISTING SCAN METHOD - DO NOT TOUCH
+  // UPDATED SCAN METHOD - Now looks for ESP32S3_StepperMotor
   Future<List<ScanResult>> startScan({Duration timeout = const Duration(seconds: 15)}) async {
     // Check Bluetooth state first
     if (bluetoothState != BluetoothAdapterState.on) {
@@ -56,12 +56,25 @@ class BleService {
     );
 
     FlutterBluePlus.scanResults.listen((results) {
-      scanResults = results;
+      // Filter for ESP32S3_StepperMotor devices
+      scanResults = results.where((result) {
+        final deviceName = result.device.platformName;
+        final advertisedName = result.advertisementData.advName;
+        return deviceName.contains(BleConstants.deviceName) || 
+               advertisedName.contains(BleConstants.deviceName) ||
+               deviceName.contains('ESP32') ||
+               advertisedName.contains('ESP32');
+      }).toList();
     });
 
     // Wait for scan to complete
     await Future.delayed(timeout);
     await FlutterBluePlus.stopScan();
+
+    print('🔍 Found ${scanResults.length} ESP32 devices');
+    for (var result in scanResults) {
+      print('📱 Device: ${result.device.platformName} (${result.advertisementData.advName})');
+    }
 
     return scanResults;
   }

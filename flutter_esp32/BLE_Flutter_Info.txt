@@ -1,0 +1,204 @@
+ESP32-S3 Stepper Motor BLE Information for Flutter App
+====================================================
+
+DEVICE INFORMATION
+------------------
+Device Name: ESP32S3_StepperMotor
+BLE Version: 5.0
+Appearance: Generic
+Advertising Interval: 20-40ms
+MAC Address: 24:ec:4a:3a:2c:c8 (example)
+
+BLE SERVICES & CHARACTERISTICS
+-------------------------------
+
+1. LED Control Service
+UUID: efcdab90-7856-3412-efcd-ab9078563412
+Characteristics:
+  - LED1: 12345678-90ab-cdef-1234-567890abcd01 (GPIO2) [Read, Write]
+  - LED2: 12345678-90ab-cdef-1234-567890abcd02 (GPIO4) [Read, Write]
+  - LED3: 12345678-90ab-cdef-1234-567890abcd03 (GPIO5) [Read, Write]
+  - LED4: 12345678-90ab-cdef-1234-567890abcd04 (GPIO18) [Read, Write]
+
+2. Motor Control Service
+UUID: 2143658790efcdab-1234-5678-90ab-cdef
+Characteristics:
+  - Motor Position: 2143658790efcdab-1234-5678-90ab-cd01 [Read]
+  - Motor Command:  2143658790efcdab-1234-5678-90ab-cd02 [Write]
+  - Motor Status:   2143658790efcdab-1234-5678-90ab-cd03 [Read, Notify]
+  - Motor Speed:    2143658790efcdab-1234-5678-90ab-cd04 [Read, Write]
+
+MOTOR COMMANDS (3-byte format: [command, param_low, param_high])
+----------------------------------------------------------------
+0x00 - STOP        | Parameter: 0        | Stop motor movement
+0x01 - MOVE_ABS    | Parameter: position | Move to absolute position (0-65535)
+0x02 - MOVE_REL    | Parameter: steps    | Move relative steps (-32768 to +32767)
+0x03 - HOME        | Parameter: 0        | Home the motor (find GPIO13 sensor)
+0x04 - SET_SPEED   | Parameter: delay_ms | Set step delay (5-100ms)
+0x05 - ENABLE      | Parameter: 0        | Enable motor driver (DRV8833)
+0x06 - DISABLE     | Parameter: 0        | Disable motor driver
+
+MOTOR STATUS RESPONSE (4-byte format: [status, pos_low, pos_high, fault])
+-------------------------------------------------------------------------
+Status Values:
+  0 = STOPPED  | Motor is stopped
+  1 = MOVING   | Motor is moving
+  2 = HOMING   | Motor is finding home position
+  3 = ERROR    | Motor fault detected
+
+Position: 16-bit value (pos_high << 8 | pos_low)
+Fault: 0=OK, 1=Hardware fault detected
+
+FLUTTER DEPENDENCIES
+---------------------
+Add to pubspec.yaml:
+dependencies:
+  flutter_blue_plus: ^1.32.8
+  permission_handler: ^11.3.1
+
+ANDROID PERMISSIONS (android/app/src/main/AndroidManifest.xml)
+-------------------------------------------------------------
+<uses-permission android:name="android.permission.BLUETOOTH" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+iOS PERMISSIONS (ios/Runner/Info.plist)
+----------------------------------------
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>This app needs Bluetooth to control ESP32 stepper motor</string>
+<key>NSBluetoothPeripheralUsageDescription</key>
+<string>This app needs Bluetooth to control ESP32 stepper motor</string>
+
+FLUTTER CONNECTION CODE EXAMPLE
+--------------------------------
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+// 1. Request permissions
+await Permission.bluetooth.request();
+await Permission.bluetoothScan.request();
+await Permission.bluetoothConnect.request();
+await Permission.location.request();
+
+// 2. Start scanning
+await FlutterBluePlus.startScan(timeout: Duration(seconds: 15));
+
+// 3. Find ESP32 device
+BluetoothDevice? esp32Device;
+FlutterBluePlus.scanResults.listen((results) {
+  for (ScanResult r in results) {
+    if (r.device.platformName == 'ESP32S3_StepperMotor') {
+      esp32Device = r.device;
+      break;
+    }
+  }
+});
+
+// 4. Connect to device
+await esp32Device!.connect();
+
+// 5. Discover services
+List<BluetoothService> services = await esp32Device!.discoverServices();
+
+// 6. Find motor service and characteristics
+BluetoothService? motorService;
+BluetoothCharacteristic? commandChar;
+BluetoothCharacteristic? statusChar;
+
+for (BluetoothService service in services) {
+  if (service.uuid.toString().contains('2143658790efcdab')) {
+    motorService = service;
+    for (BluetoothCharacteristic char in service.characteristics) {
+      String uuid = char.uuid.toString();
+      if (uuid.contains('cd02')) commandChar = char;      // Command
+      if (uuid.contains('cd03')) statusChar = char;       // Status
+    }
+    break;
+  }
+}
+
+// 7. Enable status notifications
+if (statusChar != null) {
+  await statusChar!.setNotifyValue(true);
+  statusChar!.lastValueStream.listen((value) {
+    if (value.length >= 4) {
+      int status = value[0];
+      int position = (value[2] << 8) | value[1];
+      bool fault = value[3] != 0;
+      print('Status: $status, Position: $position, Fault: $fault');
+    }
+  });
+}
+
+// 8. Send motor commands
+Future<void> sendCommand(int cmd, int param) async {
+  if (commandChar != null) {
+    List<int> bytes = [cmd, param & 0xFF, (param >> 8) & 0xFF];
+    await commandChar!.write(bytes);
+  }
+}
+
+COMMAND EXAMPLES
+----------------
+// Enable motor
+await sendCommand(0x05, 0);
+
+// Set speed to 20ms per step
+await sendCommand(0x04, 20);
+
+// Move 1000 steps forward
+await sendCommand(0x02, 1000);
+
+// Move 500 steps backward
+await sendCommand(0x02, -500);  // Will be converted to 2's complement
+
+// Move to absolute position 2500
+await sendCommand(0x01, 2500);
+
+// Home the motor
+await sendCommand(0x03, 0);
+
+// Stop motor
+await sendCommand(0x00, 0);
+
+// Disable motor
+await sendCommand(0x06, 0);
+
+HARDWARE INFORMATION
+--------------------
+ESP32-S3 GPIO Pins:
+- Motor Control: GPIO21,19,16,17,14,12 (DRV8833 driver)
+- Home Sensor: GPIO13 (D2F-01F sensor, active low)
+- LED Status: GPIO2,4,5,18
+
+Power Requirements:
+- ESP32-S3: 5V USB power
+- Motor Driver: 5-12V external supply
+- Motor: Compatible with DRV8833 (max 1.2A per phase)
+
+Motor Specifications:
+- Direction: MOVES LEFT when positive steps (reversed firmware)
+- Home Position: GPIO13 sensor triggers when LOW (0V)
+- Step Resolution: Configurable via DRV8833
+- Speed Range: 5-100ms delay between steps
+- Position Range: 0-65535 (16-bit)
+
+TROUBLESHOOTING
+---------------
+1. Device not found: Check device name "ESP32S3_StepperMotor"
+2. Connection fails: Ensure ESP32 is powered and not connected elsewhere
+3. Service not found: Wait for full service discovery completion
+4. Commands ignored: Check motor is enabled first (0x05 command)
+5. No movement: Verify motor power supply and wiring
+6. Position drift: Use home command (0x03) to recalibrate
+
+TIMING CONSIDERATIONS
+---------------------
+- Service discovery: ~2-5 seconds
+- Command response: ~10-50ms
+- Home operation: ~10-30 seconds (depends on position)
+- 1000 steps at 20ms: ~20 seconds movement time
+- BLE connection timeout: 15 seconds recommended
+
+This file contains complete BLE information for ESP32-S3 stepper motor control via Flutter app.
