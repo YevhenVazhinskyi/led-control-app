@@ -14,7 +14,7 @@
         android:required="true"/>
     
     <application
-        android:label="ESP32 LED Controller"
+        android:label="ESP32 Stepper Motor Controller"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

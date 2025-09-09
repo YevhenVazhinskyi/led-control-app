@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'services/ble_service.dart';
-import 'models/led_device.dart';
 import 'utils/permissions_helper.dart';
 import 'utils/ui_helpers.dart';
 import 'widgets/device_selection_sheet.dart';
 import 'widgets/connection_status_card.dart';
-import 'widgets/led_control_widget.dart';
 import 'widgets/motor_control_widget.dart';
 
 void main() {
@@ -25,21 +23,20 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const LedControllerPage(),
+      home: const MotorControllerPage(),
     );
   }
 }
 
-class LedControllerPage extends StatefulWidget {
-  const LedControllerPage({super.key});
+class MotorControllerPage extends StatefulWidget {
+  const MotorControllerPage({super.key});
 
   @override
-  State<LedControllerPage> createState() => _LedControllerPageState();
+  State<MotorControllerPage> createState() => _MotorControllerPageState();
 }
 
-class _LedControllerPageState extends State<LedControllerPage> {
+class _MotorControllerPageState extends State<MotorControllerPage> {
   final BleService _bleService = BleService();
-  final LedState _ledState = LedState();
 
   // Scanning state
   bool isScanning = false;
@@ -108,17 +105,17 @@ class _LedControllerPageState extends State<LedControllerPage> {
       }
 
       // Check service discovery results
-      if (_bleService.ledService == null) {
+      if (_bleService.motorService == null) {
         UiHelpers.showSnackBar(
           context,
-          'LED Service NOT found!\n\nExpected: ${_bleService.getServicesDebugInfo()}',
+          'Motor Service NOT found!\n\nExpected: ${_bleService.getServicesDebugInfo()}',
           Colors.orange,
         );
       } else {
-        final foundChars = _bleService.getFoundCharacteristicsCount();
+        final foundChars = _bleService.getFoundMotorCharacteristicsCount();
         UiHelpers.showSnackBar(
           context,
-          'LED Service found! ✅\n\nService: ${_bleService.ledService!.uuid.toString()}\nCharacteristics: $foundChars/4 found\n\nReady to control LEDs!',
+          'Motor Service found! ✅\n\nService: ${_bleService.motorService!.uuid.toString()}\nCharacteristics: $foundChars/4 found\n\nReady to control stepper motor!',
           Colors.green,
         );
       }
@@ -129,41 +126,16 @@ class _LedControllerPageState extends State<LedControllerPage> {
     }
   }
 
-  Future<void> _controlLed(BluetoothCharacteristic? characteristic, bool state,
-      int ledNumber) async {
-    try {
-      await _bleService.controlLed(characteristic, state);
-
-      setState(() {
-        _ledState.updateLedState(ledNumber, state);
-      });
-
-      if (mounted) {
-        UiHelpers.showSnackBar(
-          context,
-          'LED $ledNumber turned ${state ? "ON" : "OFF"}',
-          state ? Colors.green : Colors.red,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        UiHelpers.showSnackBar(context, 'Failed to control LED: $e');
-      }
-    }
-  }
-
   Future<void> _disconnect() async {
     await _bleService.disconnect();
     setState(() {});
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ESP32 LED Controller'),
+        title: const Text('ESP32-S3 Stepper Motor Controller'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Padding(
@@ -180,64 +152,28 @@ class _LedControllerPageState extends State<LedControllerPage> {
 
             const SizedBox(height: 20),
 
-            // LED controls
-            if (_bleService.isConnected && _bleService.ledService != null) ...[
+            // Motor controls
+            if (_bleService.isConnected && _bleService.hasMotorService) ...[
               const Text(
-                'LED Controls',
+                'Stepper Motor Controls',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  children: [
-                    LedControlWidget(
-                      ledName: 'LED 1',
-                      state: _ledState.led1State,
-                      characteristic: _bleService.led1Char,
-                      ledNumber: 1,
-                      onLedToggle: _controlLed,
-                    ),
-                    LedControlWidget(
-                      ledName: 'LED 2',
-                      state: _ledState.led2State,
-                      characteristic: _bleService.led2Char,
-                      ledNumber: 2,
-                      onLedToggle: _controlLed,
-                    ),
-                    LedControlWidget(
-                      ledName: 'LED 3',
-                      state: _ledState.led3State,
-                      characteristic: _bleService.led3Char,
-                      ledNumber: 3,
-                      onLedToggle: _controlLed,
-                    ),
-                    LedControlWidget(
-                      ledName: 'LED 4',
-                      state: _ledState.led4State,
-                      characteristic: _bleService.led4Char,
-                      ledNumber: 4,
-                      onLedToggle: _controlLed,
-                    ),
-                  ],
+                child: MotorControlWidget(
+                  bleService: _bleService,
                 ),
-              ),
-
-              // MOTOR CONTROL WIDGET ADDED
-              const SizedBox(height: 10),
-              MotorControlWidget(
-                bleService: _bleService,
               ),
             ] else if (_bleService.isConnected)
               const Expanded(
                 child: Center(
-                  child: Text('Searching for LED service...'),
+                  child: Text('Searching for motor service...'),
                 ),
               )
             else
               const Expanded(
                 child: Center(
-                  child: Text('Select a Bluetooth device to control LEDs'),
+                  child: Text('Select ESP32-S3 device to control stepper motor'),
                 ),
               ),
           ],

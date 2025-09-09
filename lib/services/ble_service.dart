@@ -5,18 +5,11 @@ import '../models/motor_device.dart';
 class BleService {
   BluetoothDevice? connectedDevice;
   List<BluetoothService> services = [];
-  BluetoothService? ledService;
   
-  // MOTOR SERVICE ADDITION (NEW)
+  // MOTOR SERVICE
   BluetoothService? motorService;
-  
-  // LED characteristics (EXISTING - DO NOT TOUCH)
-  BluetoothCharacteristic? led1Char;
-  BluetoothCharacteristic? led2Char;
-  BluetoothCharacteristic? led3Char;
-  BluetoothCharacteristic? led4Char;
 
-  // MOTOR characteristics (NEW)
+  // MOTOR characteristics
   BluetoothCharacteristic? motorPositionChar;
   BluetoothCharacteristic? motorCommandChar;
   BluetoothCharacteristic? motorStatusChar;
@@ -119,39 +112,7 @@ class BleService {
       }
     }
 
-    // EXISTING LED SERVICE DISCOVERY - DO NOT TOUCH
-    for (BluetoothService service in services) {
-      if (service.uuid.toString().toLowerCase() ==
-          BleConstants.ledServiceUuid.toLowerCase()) {
-        ledService = service;
-
-        // Assign characteristics to LEDs (use available characteristics)
-        final characteristics = service.characteristics;
-        if (characteristics.length >= 1) led1Char = characteristics[0];
-        if (characteristics.length >= 2) led2Char = characteristics[1];
-        if (characteristics.length >= 3) led3Char = characteristics[2];
-        if (characteristics.length >= 4) led4Char = characteristics[3];
-
-        // Also check for specific UUIDs (fallback)
-        for (BluetoothCharacteristic characteristic
-            in service.characteristics) {
-          final charUuid = characteristic.uuid.toString().toLowerCase();
-
-          if (charUuid == BleConstants.led1CharUuid.toLowerCase()) {
-            led1Char = characteristic;
-          } else if (charUuid == BleConstants.led2CharUuid.toLowerCase()) {
-            led2Char = characteristic;
-          } else if (charUuid == BleConstants.led3CharUuid.toLowerCase()) {
-            led3Char = characteristic;
-          } else if (charUuid == BleConstants.led4CharUuid.toLowerCase()) {
-            led4Char = characteristic;
-          }
-        }
-        break;
-      }
-    }
-
-    // NEW MOTOR SERVICE DISCOVERY
+    // MOTOR SERVICE DISCOVERY
     for (BluetoothService service in services) {
       if (service.uuid.toString().toLowerCase() ==
           BleConstants.motorServiceUuid.toLowerCase()) {
@@ -203,11 +164,6 @@ class BleService {
     }
   }
 
-  // EXISTING LED METHOD - DO NOT TOUCH
-  Future<void> controlLed(BluetoothCharacteristic? characteristic, bool state) async {
-    if (characteristic == null) return;
-    await characteristic.write([state ? 1 : 0]);
-  }
 
   // BASIC MOTOR COMMAND SENDER - TRY ALL AVAILABLE CHARACTERISTICS
   Future<void> sendBasicMotorCommand(MotorCommand command) async {
@@ -262,19 +218,13 @@ class BleService {
 
   // REMOVED CONVENIENCE METHODS - USE sendBasicMotorCommand DIRECTLY
 
-  // EXISTING DISCONNECT METHOD - EXTENDED WITH MOTOR CLEANUP
+  // DISCONNECT METHOD WITH MOTOR CLEANUP
   Future<void> disconnect() async {
     if (connectedDevice != null) {
       await connectedDevice!.disconnect();
       connectedDevice = null;
       isConnected = false;
-      // EXISTING LED CLEANUP
-      ledService = null;
-      led1Char = null;
-      led2Char = null;
-      led3Char = null;
-      led4Char = null;
-      // NEW MOTOR CLEANUP
+      // MOTOR CLEANUP
       motorService = null;
       motorPositionChar = null;
       motorCommandChar = null;
@@ -297,17 +247,8 @@ class BleService {
     return debugInfo;
   }
 
-  // EXISTING METHOD - DO NOT TOUCH
-  int getFoundCharacteristicsCount() {
-    int foundChars = 0;
-    if (led1Char != null) foundChars++;
-    if (led2Char != null) foundChars++;
-    if (led3Char != null) foundChars++;
-    if (led4Char != null) foundChars++;
-    return foundChars;
-  }
 
-  // NEW MOTOR HELPER METHODS
+  // MOTOR HELPER METHODS
   int getFoundMotorCharacteristicsCount() {
     int foundChars = 0;
     if (motorPositionChar != null) foundChars++;

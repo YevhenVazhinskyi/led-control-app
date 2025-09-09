@@ -12,15 +12,7 @@ MAC Address: 24:ec:4a:3a:2c:c8 (example)
 BLE SERVICES & CHARACTERISTICS
 -------------------------------
 
-1. LED Control Service
-UUID: efcdab90-7856-3412-efcd-ab9078563412
-Characteristics:
-  - LED1: 12345678-90ab-cdef-1234-567890abcd01 (GPIO2) [Read, Write]
-  - LED2: 12345678-90ab-cdef-1234-567890abcd02 (GPIO4) [Read, Write]
-  - LED3: 12345678-90ab-cdef-1234-567890abcd03 (GPIO5) [Read, Write]
-  - LED4: 12345678-90ab-cdef-1234-567890abcd04 (GPIO18) [Read, Write]
-
-2. Motor Control Service
+Motor Control Service
 UUID: 2143658790efcdab-1234-5678-90ab-cdef
 Characteristics:
   - Motor Position: 2143658790efcdab-1234-5678-90ab-cd01 [Read]
@@ -37,6 +29,7 @@ MOTOR COMMANDS (3-byte format: [command, param_low, param_high])
 0x04 - SET_SPEED   | Parameter: delay_ms | Set step delay (5-100ms)
 0x05 - ENABLE      | Parameter: 0        | Enable motor driver (DRV8833)
 0x06 - DISABLE     | Parameter: 0        | Disable motor driver
+0x07 - CALIBRATE   | Parameter: 0        | 30-second LEFT movement for manual home button press
 
 MOTOR STATUS RESPONSE (4-byte format: [status, pos_low, pos_high, fault])
 -------------------------------------------------------------------------
@@ -105,12 +98,14 @@ List<BluetoothService> services = await esp32Device!.discoverServices();
 BluetoothService? motorService;
 BluetoothCharacteristic? commandChar;
 BluetoothCharacteristic? statusChar;
+BluetoothCharacteristic? positionChar;
 
 for (BluetoothService service in services) {
   if (service.uuid.toString().contains('2143658790efcdab')) {
     motorService = service;
     for (BluetoothCharacteristic char in service.characteristics) {
       String uuid = char.uuid.toString();
+      if (uuid.contains('cd01')) positionChar = char;     // Position
       if (uuid.contains('cd02')) commandChar = char;      // Command
       if (uuid.contains('cd03')) statusChar = char;       // Status
     }
@@ -165,12 +160,15 @@ await sendCommand(0x00, 0);
 // Disable motor
 await sendCommand(0x06, 0);
 
+// 30-second calibration (move LEFT for manual home button press)
+await sendCommand(0x07, 0);
+
 HARDWARE INFORMATION
 --------------------
 ESP32-S3 GPIO Pins:
 - Motor Control: GPIO21,19,16,17,14,12 (DRV8833 driver)
 - Home Sensor: GPIO13 (D2F-01F sensor, active low)
-- LED Status: GPIO2,4,5,18
+- Available Pins: GPIO2,4,5,18 (previously used for LEDs, now free)
 
 Power Requirements:
 - ESP32-S3: 5V USB power
@@ -192,13 +190,22 @@ TROUBLESHOOTING
 4. Commands ignored: Check motor is enabled first (0x05 command)
 5. No movement: Verify motor power supply and wiring
 6. Position drift: Use home command (0x03) to recalibrate
+7. Manual homing: Use calibrate command (0x07) for 30-second LEFT movement
 
 TIMING CONSIDERATIONS
 ---------------------
 - Service discovery: ~2-5 seconds
 - Command response: ~10-50ms
 - Home operation: ~10-30 seconds (depends on position)
+- Calibration: 30 seconds (fixed duration for manual button press)
 - 1000 steps at 20ms: ~20 seconds movement time
 - BLE connection timeout: 15 seconds recommended
+
+NOTES
+-----
+- LED functionality has been completely removed from this firmware
+- GPIO pins 2, 4, 5, 18 are now available for other uses
+- Only Motor Control Service is available (no LED service)
+- Use calibrate command (0x07) for manual home position setup
 
 This file contains complete BLE information for ESP32-S3 stepper motor control via Flutter app.

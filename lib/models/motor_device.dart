@@ -100,4 +100,5 @@ class MotorCommand {
     MotorCommand(command: BleConstants.motorCmdMoveRelative, parameter: steps);
   factory MotorCommand.setSpeed(int speed) => 
     MotorCommand(command: BleConstants.motorCmdSetSpeed, parameter: speed);
+  factory MotorCommand.calibrate() => MotorCommand(command: BleConstants.motorCmdCalibrate);
 }
