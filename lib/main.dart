@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'services/ble_service.dart';
+import 'models/motor_device.dart';
 import 'utils/permissions_helper.dart';
 import 'utils/ui_helpers.dart';
 import 'widgets/device_selection_sheet.dart';
@@ -105,18 +106,27 @@ class _MotorControllerPageState extends State<MotorControllerPage> {
       }
 
       // Check service discovery results
-      if (_bleService.motorService == null) {
+      if (_bleService.hasDualMotorSupport) {
+        final motor1Chars = _bleService.getFoundMotorCharacteristicsCount(MotorId.motor1);
+        final motor2Chars = _bleService.getFoundMotorCharacteristicsCount(MotorId.motor2);
+        final systemChars = _bleService.getFoundSystemCharacteristicsCount();
         UiHelpers.showSnackBar(
           context,
-          'Motor Service NOT found!\n\nExpected: ${_bleService.getServicesDebugInfo()}',
-          Colors.orange,
+          'Dual Motor System found! ✅\n\nMotor 1: $motor1Chars/4 chars\nMotor 2: $motor2Chars/4 chars\nSystem: $systemChars/3 chars\n\nReady for dual motor control!',
+          Colors.green,
+        );
+      } else if (_bleService.hasMotor1Service) {
+        final foundChars = _bleService.getFoundMotorCharacteristicsCount(MotorId.motor1);
+        UiHelpers.showSnackBar(
+          context,
+          'Motor 1 Service found! ✅\n\nCharacteristics: $foundChars/4 found\n\nSingle motor mode ready!',
+          Colors.green,
         );
       } else {
-        final foundChars = _bleService.getFoundMotorCharacteristicsCount();
         UiHelpers.showSnackBar(
           context,
-          'Motor Service found! ✅\n\nService: ${_bleService.motorService!.uuid.toString()}\nCharacteristics: $foundChars/4 found\n\nReady to control stepper motor!',
-          Colors.green,
+          'No Motor Services found!\n\nExpected: ${_bleService.getServicesDebugInfo()}',
+          Colors.orange,
         );
       }
     } catch (e) {
@@ -138,7 +148,7 @@ class _MotorControllerPageState extends State<MotorControllerPage> {
         title: const Text('ESP32-S3 Stepper Motor Controller'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
@@ -159,19 +169,19 @@ class _MotorControllerPageState extends State<MotorControllerPage> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: MotorControlWidget(
-                  bleService: _bleService,
-                ),
+              MotorControlWidget(
+                bleService: _bleService,
               ),
             ] else if (_bleService.isConnected)
-              const Expanded(
+              const SizedBox(
+                height: 200,
                 child: Center(
                   child: Text('Searching for motor service...'),
                 ),
               )
             else
-              const Expanded(
+              const SizedBox(
+                height: 200,
                 child: Center(
                   child: Text('Select ESP32-S3 device to control stepper motor'),
                 ),
